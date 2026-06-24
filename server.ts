@@ -6,13 +6,17 @@ import { BookingStatus } from "./src/types";
 import authRouter from "./src/routes/auth";
 
 // Helper function to check if a booking is in the past
-function isTimeInPast(dateStr: string, timeStr: string, sysTime?: Date): boolean {
+function isTimeInPast(
+  dateStr: string,
+  timeStr: string,
+  sysTime?: Date,
+): boolean {
   const now = sysTime || new Date();
-  
+
   // Format today's date in local server profile YYYY-MM-DD
-  const [year, month, day] = dateStr.split('-').map(Number);
-  const [hour, min] = timeStr.split(':').map(Number);
-  
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const [hour, min] = timeStr.split(":").map(Number);
+
   const bookingDateTime = new Date(year, month - 1, day, hour, min, 0);
   return bookingDateTime.getTime() < now.getTime();
 }
@@ -26,17 +30,20 @@ async function startServer() {
 
   // API Routes
   app.use("/api/auth", authRouter);
-  
+
   // Get database health status (SQLITE confirmation)
   app.get("/api/db-health", async (req, res) => {
     try {
-      if (typeof (db as any).getHealthInfo === 'function') {
+      if (typeof (db as any).getHealthInfo === "function") {
         res.json(await (db as any).getHealthInfo());
       } else {
         res.status(501).json({ error: "Endpoint diagnostics not supported." });
       }
     } catch (err: any) {
-      res.status(500).json({ error: "Erro ao obter status do banco de dados.", details: err.message });
+      res.status(500).json({
+        error: "Erro ao obter status do banco de dados.",
+        details: err.message,
+      });
     }
   });
 
@@ -56,7 +63,7 @@ async function startServer() {
       const currentConfig = await db.getConfig();
       const updated = await db.updateConfig({
         ...currentConfig,
-        ...req.body
+        ...req.body,
       });
       res.json(updated);
     } catch (err: any) {
@@ -80,14 +87,20 @@ async function startServer() {
       const { clientName, clientEmail, clientPhone, date, time } = req.body;
 
       if (!clientName || !clientEmail || !clientPhone || !date || !time) {
-        return res.status(400).json({ error: "Todos os campos do cliente e do agendamento são obrigatórios." });
+        return res.status(400).json({
+          error:
+            "Todos os campos do cliente e do agendamento são obrigatórios.",
+        });
       }
 
       // 1. Enforce past dates block
       // Note: we can parse server current time or let client validate, but let's secure on the server.
       const currentServerTime = new Date();
       if (isTimeInPast(date, time, currentServerTime)) {
-        return res.status(400).json({ error: "Não é possível realizar agendamentos em datas ou horários passados." });
+        return res.status(400).json({
+          error:
+            "Não é possível realizar agendamentos em datas ou horários passados.",
+        });
       }
 
       // 2. Business hours check
@@ -96,42 +109,55 @@ async function startServer() {
       const weekday = dateObj.getDay(); // 0 is Sunday, 6 is Saturday
 
       if (config.closedDays.includes(weekday)) {
-        return res.status(400).json({ error: "A barbearia está fechada neste dia da semana." });
+        return res
+          .status(400)
+          .json({ error: "A barbearia está fechada neste dia da semana." });
       }
 
       // Check slot falls inside start/end hours
-      const [sh, sm] = config.startHour.split(':').map(Number);
-      const [eh, em] = config.endHour.split(':').map(Number);
-      const [th, tm] = time.split(':').map(Number);
+      const [sh, sm] = config.startHour.split(":").map(Number);
+      const [eh, em] = config.endHour.split(":").map(Number);
+      const [th, tm] = time.split(":").map(Number);
 
       const startVal = sh * 60 + sm;
       const endVal = eh * 60 + em;
       const timeVal = th * 60 + tm;
 
       if (timeVal < startVal || timeVal >= endVal) {
-        return res.status(400).json({ error: "O horário selecionado está fora do expediente da barbearia." });
+        return res.status(400).json({
+          error: "O horário selecionado está fora do expediente da barbearia.",
+        });
       }
 
       // Check lunch break
       if (config.lunchStart && config.lunchEnd) {
-        const [lsh, lsm] = config.lunchStart.split(':').map(Number);
-        const [leh, lem] = config.lunchEnd.split(':').map(Number);
+        const [lsh, lsm] = config.lunchStart.split(":").map(Number);
+        const [leh, lem] = config.lunchEnd.split(":").map(Number);
         const lunchStartVal = lsh * 60 + lsm;
         const lunchEndVal = leh * 60 + lem;
 
         if (timeVal >= lunchStartVal && timeVal < lunchEndVal) {
-          return res.status(400).json({ error: "O horário selecionado coincide com o intervalo de almoço do barbeiro." });
+          return res.status(400).json({
+            error:
+              "O horário selecionado coincide com o intervalo de almoço do barbeiro.",
+          });
         }
       }
 
       // 3. Prevent duplicate bookings / conflicts
       const existingBookings = await db.getBookings();
       const conflict = existingBookings.find(
-        (b) => b.date === date && b.time === time && (b.status === "approved" || b.status === "pending")
+        (b) =>
+          b.date === date &&
+          b.time === time &&
+          (b.status === "approved" || b.status === "pending"),
       );
 
       if (conflict) {
-        return res.status(400).json({ error: "Este horário acabou de ser reservado por outro cliente. Por favor, escolha outro horário livre." });
+        return res.status(400).json({
+          error:
+            "Este horário acabou de ser reservado por outro cliente. Por favor, escolha outro horário livre.",
+        });
       }
 
       // If all passed, save with "pending" (Pendente de confirmação)
@@ -147,62 +173,78 @@ async function startServer() {
       res.status(201).json(newBooking);
     } catch (err: any) {
       console.error(err);
-      res.status(500).json({ error: "Erro interno do servidor ao criar agendamento." });
+      res
+        .status(500)
+        .json({ error: "Erro interno do servidor ao criar agendamento." });
     }
   });
 
   // Update a booking (status, time, date)
-  app.patch(["/api/bookings/:id", "/api/agendamentos/:id"], async (req, res) => {
-    try {
-      const { id } = req.params;
-      const updates = req.body;
+  app.patch(
+    ["/api/bookings/:id", "/api/agendamentos/:id"],
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const updates = req.body;
 
-      const booking = await db.getBookingById(id);
-      if (!booking) {
-        return res.status(404).json({ error: "Agendamento não encontrado." });
-      }
-
-      // If updating date or time, check for conflicts
-      if (updates.date || updates.time) {
-        const targetDate = updates.date || booking.date;
-        const targetTime = updates.time || booking.time;
-
-        const currentServerTime = new Date();
-        if (isTimeInPast(targetDate, targetTime, currentServerTime)) {
-          return res.status(400).json({ error: "Não é possível alterar para uma data ou horário passado." });
+        const booking = await db.getBookingById(id);
+        if (!booking) {
+          return res.status(404).json({ error: "Agendamento não encontrado." });
         }
 
-        const existingBookings = await db.getBookings();
-        const conflict = existingBookings.find(
-          (b) => b.id !== id && b.date === targetDate && b.time === targetTime && (b.status === "approved" || b.status === "pending")
-        );
+        // If updating date or time, check for conflicts
+        if (updates.date || updates.time) {
+          const targetDate = updates.date || booking.date;
+          const targetTime = updates.time || booking.time;
 
-        if (conflict) {
-          return res.status(400).json({ error: "Este horário possui conflito com outra reserva ativa." });
+          const currentServerTime = new Date();
+          if (isTimeInPast(targetDate, targetTime, currentServerTime)) {
+            return res.status(400).json({
+              error: "Não é possível alterar para uma data ou horário passado.",
+            });
+          }
+
+          const existingBookings = await db.getBookings();
+          const conflict = existingBookings.find(
+            (b) =>
+              b.id !== id &&
+              b.date === targetDate &&
+              b.time === targetTime &&
+              (b.status === "approved" || b.status === "pending"),
+          );
+
+          if (conflict) {
+            return res.status(400).json({
+              error: "Este horário possui conflito com outra reserva ativa.",
+            });
+          }
         }
-      }
 
-      const updatedBooking = await db.updateBooking(id, updates);
-      res.json(updatedBooking);
-    } catch (err: any) {
-      res.status(500).json({ error: "Erro ao atualizar agendamento." });
-    }
-  });
+        const updatedBooking = await db.updateBooking(id, updates);
+        res.json(updatedBooking);
+      } catch (err: any) {
+        res.status(500).json({ error: "Erro ao atualizar agendamento." });
+      }
+    },
+  );
 
   // Delete a booking
-  app.delete(["/api/bookings/:id", "/api/agendamentos/:id"], async (req, res) => {
-    try {
-      const { id } = req.params;
-      const deleted = await db.deleteBooking(id);
-      if (deleted) {
-        res.json({ success: true, message: "Agendamento deletado." });
-      } else {
-        res.status(404).json({ error: "Agendamento não encontrado." });
+  app.delete(
+    ["/api/bookings/:id", "/api/agendamentos/:id"],
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const deleted = await db.deleteBooking(id);
+        if (deleted) {
+          res.json({ success: true, message: "Agendamento deletado." });
+        } else {
+          res.status(404).json({ error: "Agendamento não encontrado." });
+        }
+      } catch (err: any) {
+        res.status(500).json({ error: "Erro ao deletar agendamento." });
       }
-    } catch (err: any) {
-      res.status(500).json({ error: "Erro ao deletar agendamento." });
-    }
-  });
+    },
+  );
 
   // Vite Integration for Serving Frontend
   if (process.env.NODE_ENV !== "production") {
