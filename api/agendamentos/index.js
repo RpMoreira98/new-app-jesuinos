@@ -1,9 +1,14 @@
 // Importa o PrismaClient diretamente para garantir que não haja quebra de caminhos relativos na Vercel
 const { PrismaClient } = require("@prisma/client");
 
-const prisma = global.prisma || new PrismaClient();
-if (process.env.NODE_ENV !== "production") {
-  global.prisma = prisma;
+let prisma;
+try {
+  prisma = global.prisma || new PrismaClient();
+  if (process.env.NODE_ENV !== "production") {
+    global.prisma = prisma;
+  }
+} catch (e) {
+  console.error("Erro ao inicializar o Prisma Client:", e);
 }
 
 module.exports = async function handler(req, res) {
