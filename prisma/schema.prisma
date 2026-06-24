@@ -1,0 +1,42 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Agendamento {
+  id          String   @id
+  clientName  String   @map("client_name")
+  clientEmail String   @map("client_email")
+  clientPhone String   @map("client_phone")
+  date        String
+  time        String
+  status      String
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("bookings")
+}
+
+model BusinessConfig {
+  id                  String  @id @default("main")
+  startHour           String  @map("start_hour")
+  endHour             String  @map("end_hour")
+  slotDurationMinutes Int     @map("slot_duration_minutes")
+  lunchStart          String? @map("lunch_start")
+  lunchEnd            String? @map("lunch_end")
+  closedDays          String  @map("closed_days")
+
+  @@map("business_config")
+}
+
+model User {
+  id        String   @id
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("users")
+}

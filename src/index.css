@@ -1,0 +1,58 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;800&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+@theme {
+  --color-gold-50_custom: #fefdf0;
+  --color-gold-100_custom: #fbf8cc;
+  --color-gold-200_custom: #f7f099;
+  --color-gold-300_custom: #f3e566;
+  --color-gold-400_custom: #eed333;
+  --color-gold-500: #c5a86c; /* Elegant Pale Gold */
+  --color-gold-600: #a88d55;
+  --color-gold-700: #876f3f;
+  --color-gold-800: #65512b;
+  --color-gold-900: #423419;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", sans-serif;
+  --font-serif: "Cinzel", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+/* Animations and helpers */
+@layer utilities {
+  .gold-gradient-text {
+    background: linear-gradient(135deg, #f3e566 0%, #c5a86c 50%, #876f3f 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  
+  .gold-gradient-bg {
+    background: linear-gradient(135deg, #eed333 0%, #c5a86c 50%, #876f3f 100%);
+  }
+
+  .gold-border {
+    border-image: linear-gradient(to right, #cfaf62, #876f3f) 1;
+  }
+}
+
+/* Custom scrollbar for beautiful lists */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #121212;
+}
+::-webkit-scrollbar-thumb {
+  background: #c5a86c;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #a88d55;
+}

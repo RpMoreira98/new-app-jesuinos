@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/api/agendamentos/:id", "destination": "/api/agendamentos/[id].js" },
+    { "source": "/api/agendamentos", "destination": "/api/agendamentos/index.js" },
+    { "source": "/api/config", "destination": "/api/config/index.js" },
+    { "source": "/api/auth/login", "destination": "/api/auth/login.js" },
+    { "source": "/api/auth/me", "destination": "/api/auth/me.js" },
+    { "source": "/api/db-health", "destination": "/api/db-health.js" },
+    { "source": "/api/health", "destination": "/api/health.js" },
+    { "source": "/((?!api|assets|favicon.ico|manifest.json).*)", "destination": "/index.html" }
+  ]
+}

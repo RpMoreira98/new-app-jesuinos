@@ -1,0 +1,6 @@
+{
+  "name": "Barbearia Jesuino's",
+  "description": "Sistema moderno e intuitivo de agendamento online e painel administrativo para a Barbearia Jesuino's.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
