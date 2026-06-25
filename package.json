@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "prisma generate && tsc && esbuild server.ts --bundle --platform=node --target=node18 --outfile=dist/server.cjs",
+    "build": "prisma generate && tsc && vite build && esbuild server.ts --bundle --platform=node --target=node18 --outfile=dist/server.cjs",
     "vercel-build": "npm run build",
     "start": "node dist/server.cjs",
     "clean": "rm -rf dist server.js",
