@@ -2,14 +2,10 @@ import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
 import { Booking, BusinessConfig, BookingStatus, User } from "../types";
 
-// Inicializa o Prisma Client configurado para ler a URL da Render/Supabase
-const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL,
-    },
-  },
-});
+// Altere o topo do seu arquivo para ficar exatamente assim:
+// Altere o topo do arquivo para isto:
+const prisma = new PrismaClient();
+(prisma as any)._datasourceUrl = process.env.DATABASE_URL;
 
 const DEFAULT_CONFIG: BusinessConfig = {
   startHour: "08:00",
@@ -32,7 +28,6 @@ export class PostgreSQLDB {
       "[POSTGRES] Conectando ao banco de dados Supabase via Prisma...",
     );
     try {
-      // Cria a configuração inicial padrão se ela não existir no banco
       const configCount = await prisma.businessConfig.count();
       if (configCount === 0) {
         await prisma.businessConfig.create({
@@ -41,14 +36,13 @@ export class PostgreSQLDB {
             startHour: DEFAULT_CONFIG.startHour,
             endHour: DEFAULT_CONFIG.endHour,
             slotDurationMinutes: DEFAULT_CONFIG.slotDurationMinutes,
-            lunchStart: DEFAULT_CONFIG.lunchStart,
-            lunchEnd: DEFAULT_CONFIG.lunchEnd,
+            lunchStart: DEFAULT_CONFIG.lunchStart ?? null,
+            lunchEnd: DEFAULT_CONFIG.lunchEnd ?? null,
             closedDays: JSON.stringify(DEFAULT_CONFIG.closedDays),
           },
         });
       }
 
-      // Cria os usuários administradores iniciais se a tabela de usuários estiver vazia
       const userCount = await prisma.user.count();
       if (userCount === 0) {
         const adminHash = bcrypt.hashSync("Jesuino@AdminSec2026$", 10);
@@ -202,8 +196,9 @@ export class PostgreSQLDB {
       startHour: r.startHour,
       endHour: r.endHour,
       slotDurationMinutes: r.slotDurationMinutes,
-      lunchStart: r.lunchStart,
-      lunchEnd: r.lunchEnd,
+      // Se vier nulo do banco, converte para uma string vazia "" para satisfazer o tipo BusinessConfig
+      lunchStart: r.lunchStart ?? "",
+      lunchEnd: r.lunchEnd ?? "",
       closedDays: Array.isArray(r.closedDays)
         ? r.closedDays
         : JSON.parse(r.closedDays || "[]"),
@@ -222,8 +217,8 @@ export class PostgreSQLDB {
         startHour: updated.startHour,
         endHour: updated.endHour,
         slotDurationMinutes: updated.slotDurationMinutes,
-        lunchStart: updated.lunchStart,
-        lunchEnd: updated.lunchEnd,
+        lunchStart: updated.lunchStart ?? null,
+        lunchEnd: updated.lunchEnd ?? null,
         closedDays: JSON.stringify(updated.closedDays),
       },
     });
@@ -256,6 +251,12 @@ export class PostgreSQLDB {
 
   public async createUser(user: Omit<User, "id" | "createdAt">): Promise<User> {
     const id = `user-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+    // Garante que a senha nunca vai como undefined para o Prisma
+    if (!user.password) {
+      throw new Error("A senha do usuário é obrigatória.");
+    }
+
     const r = await prisma.user.create({
       data: {
         id,
