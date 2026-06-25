@@ -2,13 +2,16 @@ import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
 import { Booking, BusinessConfig, BookingStatus, User } from "../types";
 
-const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL,
-    },
-  },
-} as any);
+const basePrisma = new PrismaClient();
+
+if (process.env.DATABASE_URL) {
+  const urlComOpcoes = process.env.DATABASE_URL.includes("?")
+    ? `${process.env.DATABASE_URL}&sslmode=require`
+    : `${process.env.DATABASE_URL}?sslmode=require`;
+
+  (basePrisma as any)._datasourceUrl = urlComOpcoes;
+}
+const prisma = basePrisma;
 
 const DEFAULT_CONFIG: BusinessConfig = {
   startHour: "08:00",
