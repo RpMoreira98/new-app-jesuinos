@@ -18,28 +18,7 @@ const DEFAULT_CONFIG: BusinessConfig = {
   closedDays: [0], // Sunday is closed
 };
 
-const getDefaultBookings = (): Booking[] => [
-  {
-    id: "booking-1",
-    clientName: "Rodrigo Pontes",
-    clientEmail: "rodrigopontes126@gmail.com",
-    clientPhone: "+55 88 99111-2222",
-    date: getFutureDateString(0), // Today
-    time: "14:00",
-    status: "pending",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "booking-2",
-    clientName: "Carlos Silva",
-    clientEmail: "carlossilva@email.com",
-    clientPhone: "+55 88 98888-7777",
-    date: getFutureDateString(1), // Tomorrow
-    time: "10:00",
-    status: "approved",
-    createdAt: new Date().toISOString(),
-  },
-];
+const getDefaultBookings = (): Booking[] => [];
 
 // Mapper functions
 const mapConfigFromPg = (r: any): BusinessConfig => {
@@ -170,34 +149,7 @@ export class PostgreSQLDB {
         console.log("[POSTGRES] Configuração padrão da barbearia semeada.");
       }
 
-      // 5. Seed default bookings if empty
-      const bookingCountRes = await pool.query(
-        "SELECT COUNT(*) as count FROM bookings",
-      );
-      if (parseInt(bookingCountRes.rows[0].count, 10) === 0) {
-        const defaults = getDefaultBookings();
-        for (const b of defaults) {
-          await pool.query(
-            `
-            INSERT INTO bookings (id, client_name, client_email, client_phone, date, time, status, created_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-          `,
-            [
-              b.id,
-              b.clientName,
-              b.clientEmail,
-              b.clientPhone,
-              b.date,
-              b.time,
-              b.status,
-              b.createdAt,
-            ],
-          );
-        }
-        console.log("[POSTGRES] Agendamentos de testes semeados.");
-      }
-
-      // 6. Seed/Upsert default admin users with strong passwords to guarantee access
+      // 5. Seed/Upsert default admin users with strong passwords to guarantee access
       const adminHash = bcrypt.hashSync(
         process.env.ADMIN_PASSWORD || "Jesuino@AdminSec2026$",
         10,
@@ -264,7 +216,6 @@ export class PostgreSQLDB {
       }
 
       console.log("[POSTGRES] Administradores sincronizados com sucesso.");
-
       console.log(
         "[POSTGRES] Conexão e sincronização realizada perfeitamente!",
       );
