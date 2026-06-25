@@ -2,10 +2,6 @@ import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
 import { Booking, BusinessConfig, BookingStatus, User } from "../types";
 
-if (!process.env.DATABASE_URL && process.env.DATABASE_URL !== "") {
-  process.env.DATABASE_URL = process.env.DATABASE_URL;
-}
-
 const prisma = new PrismaClient();
 
 const DEFAULT_CONFIG: BusinessConfig = {
@@ -197,7 +193,6 @@ export class PostgreSQLDB {
       startHour: r.startHour,
       endHour: r.endHour,
       slotDurationMinutes: r.slotDurationMinutes,
-      // Se vier nulo do banco, converte para uma string vazia "" para satisfazer o tipo BusinessConfig
       lunchStart: r.lunchStart ?? "",
       lunchEnd: r.lunchEnd ?? "",
       closedDays: Array.isArray(r.closedDays)
@@ -253,7 +248,6 @@ export class PostgreSQLDB {
   public async createUser(user: Omit<User, "id" | "createdAt">): Promise<User> {
     const id = `user-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-    // Garante que a senha nunca vai como undefined para o Prisma
     if (!user.password) {
       throw new Error("A senha do usuário é obrigatória.");
     }
