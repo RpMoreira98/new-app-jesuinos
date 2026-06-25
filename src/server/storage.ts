@@ -8,7 +8,7 @@ const prisma = new PrismaClient({
       url: process.env.DATABASE_URL,
     },
   },
-});
+} as any);
 
 const DEFAULT_CONFIG: BusinessConfig = {
   startHour: "08:00",
