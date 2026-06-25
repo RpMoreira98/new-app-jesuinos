@@ -1045,17 +1045,23 @@ export default function App() {
                             <label className="text-[10px] text-neutral-500 uppercase tracking-widest block font-mono">
                               Duração do Slot (minutos)
                             </label>
-                            <select
-                              value={cfgSlot}
-                              onChange={(e) =>
-                                setCfgSlot(Number(e.target.value))
-                              }
-                              className="w-full bg-[#1A1A1A] border border-neutral-800 text-stone-200 rounded-lg py-2 px-3 outline-none focus:border-[#D4AF37]"
-                            >
-                              <option value={30}>30 minutos</option>
-                              <option value={45}>45 minutos</option>
-                              <option value={60}>60 minutos (1 hora)</option>
-                            </select>
+                            <div className="grid grid-cols-3 gap-2">
+                              {[30, 45, 60].map((minutes) => (
+                                <button
+                                  key={minutes}
+                                  type="button"
+                                  onClick={() => setCfgSlot(minutes)}
+                                  className={`w-full rounded-lg py-2 text-[11px] font-mono transition-colors ${
+                                    cfgSlot === minutes
+                                      ? "bg-[#D4AF37] text-black"
+                                      : "bg-[#1A1A1A] border border-neutral-800 text-stone-200 hover:border-[#D4AF37]"
+                                  }`}
+                                >
+                                  {minutes} minutos
+                                  {minutes === 60 ? " (1 hora)" : ""}
+                                </button>
+                              ))}
+                            </div>
                           </div>
 
                           <div className="border-t border-neutral-950 pt-3 flex items-center justify-between">
