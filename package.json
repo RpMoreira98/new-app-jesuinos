@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx server.ts",
+    "dev": "tsx --env-file=.env server.ts",
     "build": "prisma generate && tsc && vite build && esbuild server.ts --bundle --platform=node --target=node18 --outfile=dist/server.cjs",
     "vercel-build": "npm run build",
     "start": "node dist/server.cjs",
