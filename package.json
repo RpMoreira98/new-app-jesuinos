@@ -5,11 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "tsc && esbuild server.ts --bundle --platform=node --target=node16 --outfile=dist/server.cjs",
+    "build": "prism generate && tsc && esbuild server.ts --bundle --platform=node --target=node16 --outfile=dist/server.cjs",
     "vercel-build": "npm run build",
     "start": "node dist/server.cjs",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
