@@ -1,12 +1,15 @@
 import bcrypt from "bcryptjs";
-import { pool } from "./database";
+import { PrismaClient } from "@prisma/client";
 import { Booking, BusinessConfig, BookingStatus, User } from "../types";
 
-const getFutureDateString = (daysAhead: number): string => {
-  const d = new Date();
-  d.setDate(d.getDate() + daysAhead);
-  return d.toISOString().split("T")[0];
-};
+// Inicializa o Prisma Client configurado para ler a URL da Render/Supabase
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL,
+    },
+  },
+});
 
 const DEFAULT_CONFIG: BusinessConfig = {
   startHour: "08:00",
@@ -17,106 +20,61 @@ const DEFAULT_CONFIG: BusinessConfig = {
   closedDays: [0],
 };
 
-const getDefaultBookings = (): Booking[] => [
-  {
-    id: "booking-1",
-    clientName: "Rodrigo Pontes",
-    clientEmail: "rodrigopontes126@gmail.com",
-    clientPhone: "+55 88 99111-2222",
-    date: getFutureDateString(0),
-    time: "14:00",
-    status: "pending",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "booking-2",
-    clientName: "Carlos Silva",
-    clientEmail: "carlossilva@email.com",
-    clientPhone: "+55 88 98888-7777",
-    date: getFutureDateString(1),
-    time: "10:00",
-    status: "approved",
-    createdAt: new Date().toISOString(),
-  },
-];
-
-const mapConfigFromPg = (r: any): BusinessConfig => {
-  if (!r) return DEFAULT_CONFIG;
-  return {
-    startHour: r.start_hour,
-    endHour: r.end_hour,
-    slotDurationMinutes: r.slot_duration_minutes,
-    lunchStart: r.lunch_start || null,
-    lunchEnd: r.lunch_end || null,
-    closedDays: Array.isArray(r.closed_days)
-      ? r.closed_days
-      : JSON.parse(r.closed_days || "[]"),
-  };
-};
-
-const mapBookingFromPg = (r: any): Booking => ({
-  id: r.id,
-  clientName: r.client_name,
-  clientEmail: r.client_email,
-  clientPhone: r.client_phone,
-  date: r.date,
-  time: r.time,
-  status: r.status as BookingStatus,
-  createdAt:
-    r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
-});
-
-const mapUserFromPg = (r: any): User => ({
-  id: r.id,
-  name: r.name,
-  email: r.email,
-  password: r.password,
-  createdAt:
-    r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
-});
-
 export class PostgreSQLDB {
   private initPromise: Promise<void>;
-  private useFallback = false;
-
-  private fallbackConfig: BusinessConfig = DEFAULT_CONFIG;
-  private fallbackBookings: Booking[] = getDefaultBookings();
-  private fallbackUsers: User[] = [];
 
   constructor() {
     this.initPromise = this.init();
   }
 
   private async init() {
-    // Força o modo de simulação em memória estável para a apresentação na Vercel
     console.log(
-      "[POSTGRES] Ativando Modo Fallback Resiliente em Memória para o ambiente de demonstração!",
+      "[POSTGRES] Conectando ao banco de dados Supabase via Prisma...",
     );
-    this.activateFallback();
-    return;
-  }
+    try {
+      // Cria a configuração inicial padrão se ela não existir no banco
+      const configCount = await prisma.businessConfig.count();
+      if (configCount === 0) {
+        await prisma.businessConfig.create({
+          data: {
+            id: "main",
+            startHour: DEFAULT_CONFIG.startHour,
+            endHour: DEFAULT_CONFIG.endHour,
+            slotDurationMinutes: DEFAULT_CONFIG.slotDurationMinutes,
+            lunchStart: DEFAULT_CONFIG.lunchStart,
+            lunchEnd: DEFAULT_CONFIG.lunchEnd,
+            closedDays: JSON.stringify(DEFAULT_CONFIG.closedDays),
+          },
+        });
+      }
 
-  private activateFallback() {
-    this.useFallback = true;
-    const adminHash = bcrypt.hashSync("Jesuino@AdminSec2026$", 10);
-    const rodrigoHash = bcrypt.hashSync("Rodrigo@SecurePass2026!", 10);
+      // Cria os usuários administradores iniciais se a tabela de usuários estiver vazia
+      const userCount = await prisma.user.count();
+      if (userCount === 0) {
+        const adminHash = bcrypt.hashSync("Jesuino@AdminSec2026$", 10);
+        const rodrigoHash = bcrypt.hashSync("Rodrigo@SecurePass2026!", 10);
 
-    this.fallbackUsers = [
-      {
-        id: "user-1",
-        name: "Jesuino Admin",
-        email: "admin@jesuinosbarbearia.com.br",
-        password: adminHash,
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: "user-2",
-        name: "Rodrigo Pontes (Admin)",
-        email: "rodrigopontes126@gmail.com",
-        password: rodrigoHash,
-        createdAt: new Date().toISOString(),
-      },
-    ];
+        await prisma.user.createMany({
+          data: [
+            {
+              id: "user-1",
+              name: "Jesuino Admin",
+              email: "admin@jesuinosbarbearia.com.br",
+              password: adminHash,
+            },
+            {
+              id: "user-2",
+              name: "Rodrigo Pontes (Admin)",
+              email: "rodrigopontes126@gmail.com",
+              password: rodrigoHash,
+            },
+          ],
+        });
+      }
+      console.log("[POSTGRES] Banco de dados inicializado e sincronizado!");
+    } catch (error) {
+      console.error("[POSTGRES] Erro ao inicializar tabelas iniciais:", error);
+    }
   }
 
   public async ensureInitialized() {
@@ -125,104 +83,194 @@ export class PostgreSQLDB {
 
   public async getHealthInfo() {
     try {
-      await this.ensureInitialized();
+      await prisma.$queryRaw`SELECT 1`;
       return {
         status: "healthy",
-        engine: "memory-fallback",
-        stats: {
-          configCount: 1,
-          bookingsCount: this.fallbackBookings.length,
-        },
+        engine: "prisma-supabase",
       };
     } catch (err: any) {
       return {
         status: "unhealthy",
-        engine: "fallback-error",
+        engine: "prisma-error",
         error: err.message,
       };
     }
   }
 
   public async getBookings(): Promise<Booking[]> {
-    await this.ensureInitialized();
-    return [...this.fallbackBookings].sort((a, b) => {
-      const diff = a.date.localeCompare(b.date);
-      if (diff !== 0) return diff;
-      return a.time.localeCompare(b.time);
+    const records = await prisma.agendamento.findMany({
+      orderBy: [{ date: "asc" }, { time: "asc" }],
     });
+    return records.map((r) => ({
+      id: r.id,
+      clientName: r.clientName,
+      clientEmail: r.clientEmail,
+      clientPhone: r.clientPhone,
+      date: r.date,
+      time: r.time,
+      status: r.status as BookingStatus,
+      createdAt: r.createdAt.toISOString(),
+    }));
   }
 
   public async getBookingById(id: string): Promise<Booking | undefined> {
-    await this.ensureInitialized();
-    return this.fallbackBookings.find((b) => b.id === id);
+    const r = await prisma.agendamento.findUnique({ where: { id } });
+    if (!r) return undefined;
+    return {
+      id: r.id,
+      clientName: r.clientName,
+      clientEmail: r.clientEmail,
+      clientPhone: r.clientPhone,
+      date: r.date,
+      time: r.time,
+      status: r.status as BookingStatus,
+      createdAt: r.createdAt.toISOString(),
+    };
   }
 
   public async createBooking(
     booking: Omit<Booking, "id" | "createdAt">,
   ): Promise<Booking> {
-    await this.ensureInitialized();
     const id = `booking-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-    const createdAt = new Date().toISOString();
-    const newB: Booking = { ...booking, id, createdAt };
-    this.fallbackBookings.push(newB);
-    return newB;
+    const r = await prisma.agendamento.create({
+      data: {
+        id,
+        clientName: booking.clientName,
+        clientEmail: booking.clientEmail,
+        clientPhone: booking.clientPhone,
+        date: booking.date,
+        time: booking.time,
+        status: booking.status,
+      },
+    });
+    return {
+      id: r.id,
+      clientName: r.clientName,
+      clientEmail: r.clientEmail,
+      clientPhone: r.clientPhone,
+      date: r.date,
+      time: r.time,
+      status: r.status as BookingStatus,
+      createdAt: r.createdAt.toISOString(),
+    };
   }
 
   public async updateBooking(
     id: string,
     updates: Partial<Omit<Booking, "id" | "createdAt">>,
   ): Promise<Booking | null> {
-    await this.ensureInitialized();
-    const current = await this.getBookingById(id);
-    if (!current) return null;
-    const updated = { ...current, ...updates };
-    this.fallbackBookings = this.fallbackBookings.map((b) =>
-      b.id === id ? updated : b,
-    );
-    return updated;
+    try {
+      const r = await prisma.agendamento.update({
+        where: { id },
+        data: {
+          clientName: updates.clientName,
+          clientEmail: updates.clientEmail,
+          clientPhone: updates.clientPhone,
+          date: updates.date,
+          time: updates.time,
+          status: updates.status,
+        },
+      });
+      return {
+        id: r.id,
+        clientName: r.clientName,
+        clientEmail: r.clientEmail,
+        clientPhone: r.clientPhone,
+        date: r.date,
+        time: r.time,
+        status: r.status as BookingStatus,
+        createdAt: r.createdAt.toISOString(),
+      };
+    } catch {
+      return null;
+    }
   }
 
   public async deleteBooking(id: string): Promise<boolean> {
-    await this.ensureInitialized();
-    const originalLength = this.fallbackBookings.length;
-    this.fallbackBookings = this.fallbackBookings.filter((b) => b.id !== id);
-    return this.fallbackBookings.length < originalLength;
+    try {
+      await prisma.agendamento.delete({ where: { id } });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   public async getConfig(): Promise<BusinessConfig> {
-    await this.ensureInitialized();
-    return this.fallbackConfig;
+    const r = await prisma.businessConfig.findUnique({ where: { id: "main" } });
+    if (!r) return DEFAULT_CONFIG;
+    return {
+      startHour: r.startHour,
+      endHour: r.endHour,
+      slotDurationMinutes: r.slotDurationMinutes,
+      lunchStart: r.lunchStart,
+      lunchEnd: r.lunchEnd,
+      closedDays: Array.isArray(r.closedDays)
+        ? r.closedDays
+        : JSON.parse(r.closedDays || "[]"),
+    };
   }
 
   public async updateConfig(
     config: Partial<BusinessConfig>,
   ): Promise<BusinessConfig> {
-    await this.ensureInitialized();
     const current = await this.getConfig();
     const updated = { ...current, ...config };
-    this.fallbackConfig = updated;
+
+    await prisma.businessConfig.update({
+      where: { id: "main" },
+      data: {
+        startHour: updated.startHour,
+        endHour: updated.endHour,
+        slotDurationMinutes: updated.slotDurationMinutes,
+        lunchStart: updated.lunchStart,
+        lunchEnd: updated.lunchEnd,
+        closedDays: JSON.stringify(updated.closedDays),
+      },
+    });
     return updated;
   }
 
   public async getUserByEmail(email: string): Promise<User | undefined> {
-    await this.ensureInitialized();
-    return this.fallbackUsers.find(
-      (u) => u.email.toLowerCase() === email.toLowerCase(),
-    );
+    const r = await prisma.user.findUnique({ where: { email } });
+    if (!r) return undefined;
+    return {
+      id: r.id,
+      name: r.name,
+      email: r.email,
+      password: r.password,
+      createdAt: r.createdAt.toISOString(),
+    };
   }
 
   public async getUserById(id: string): Promise<User | undefined> {
-    await this.ensureInitialized();
-    return this.fallbackUsers.find((u) => u.id === id);
+    const r = await prisma.user.findUnique({ where: { id } });
+    if (!r) return undefined;
+    return {
+      id: r.id,
+      name: r.name,
+      email: r.email,
+      password: r.password,
+      createdAt: r.createdAt.toISOString(),
+    };
   }
 
   public async createUser(user: Omit<User, "id" | "createdAt">): Promise<User> {
-    await this.ensureInitialized();
     const id = `user-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-    const createdAt = new Date().toISOString();
-    const newU: User = { ...user, id, createdAt };
-    this.fallbackUsers.push(newU);
-    return newU;
+    const r = await prisma.user.create({
+      data: {
+        id,
+        name: user.name,
+        email: user.email,
+        password: user.password,
+      },
+    });
+    return {
+      id: r.id,
+      name: r.name,
+      email: r.email,
+      password: r.password,
+      createdAt: r.createdAt.toISOString(),
+    };
   }
 }
 
