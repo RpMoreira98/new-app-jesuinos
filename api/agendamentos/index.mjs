@@ -1,6 +1,21 @@
-import { db } from "../../src/server/storage.js";
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+
+// Agora o require funciona nativamente sem estourar o ReferenceError!
+const { PrismaClient } = require("@prisma/client");
+
+let prisma;
+try {
+  prisma = global.prisma || new PrismaClient();
+  if (process.env.NODE_ENV !== "production") {
+    global.prisma = prisma;
+  }
+} catch (e) {
+  console.error("Erro ao inicializar o Prisma Client:", e);
+}
 
 export default async function handler(req, res) {
+  // Configuração de CORS
   res.setHeader("Access-Control-Allow-Credentials", true);
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader(
@@ -18,33 +33,63 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === "GET") {
-      const bookings = await db.getBookings();
-      return res.status(200).json(bookings);
+      const agendamentos = await prisma.agendamento.findMany({
+        orderBy: [{ date: "asc" }, { time: "asc" }],
+      });
+      return res.status(200).json(agendamentos);
     }
 
     if (req.method === "POST") {
       const { clientName, clientEmail, clientPhone, date, time } = req.body;
+
       if (!clientName || !clientEmail || !clientPhone || !date || !time) {
-        return res
-          .status(400)
-          .json({ error: "Preencha todos os campos obrigatórios." });
+        return res.status(400).json({
+          error:
+            "Preencha todos os campos obrigatórios (nome, email, telefone, data e horário).",
+        });
       }
 
-      const newBooking = await db.createBooking({
-        clientName,
-        clientEmail,
-        clientPhone,
-        date,
-        time,
-        status: "pending",
+      // Verifica duplicidade
+      const conflict = await prisma.agendamento.findFirst({
+        where: {
+          date: date,
+          time: time,
+          status: {
+            in: ["approved", "pending"],
+          },
+        },
+      });
+
+      if (conflict) {
+        return res.status(409).json({
+          error: "Este horário já está reservado. Por favor, escolha outro.",
+        });
+      }
+
+      const id = `booking-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+      const newBooking = await prisma.agendamento.create({
+        data: {
+          id,
+          clientName,
+          clientEmail,
+          clientPhone,
+          date,
+          time,
+          status: "pending",
+          createdAt: new Date(),
+        },
       });
 
       return res.status(201).json(newBooking);
     }
 
+    res.setHeader("Allow", ["GET", "POST"]);
     return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
   } catch (error) {
     console.error("[API ERROR]:", error);
-    return res.status(500).json({ error: "Erro interno: " + error.message });
+    return res.status(500).json({
+      error: "Erro interno no servidor de agendamentos: " + error.message,
+    });
   }
 }
