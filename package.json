@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "npx prisma generate --config prisma/prisma.config.ts &&vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
+    "build": "tsc && esbuild server.ts --bundle --platform=node --target=node16 --outfile=dist/server.cjs",
+    "vercel-build": "npm run build",
     "start": "node dist/server.cjs",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit"
