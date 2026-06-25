@@ -72,9 +72,9 @@ export default function BookingForm({
     price: string;
     duration: string;
   }>({
-    name: "Corte de Cabelo Premium",
-    price: "R$ 45,00",
-    duration: "45 min",
+    name: "Corte de Cabelo",
+    price: "R$ 25,00",
+    duration: "40 min",
   });
 
   const services = [
