@@ -21,7 +21,7 @@ function isTimeInPast(
 
 async function startServer() {
   const app = express();
-  const PORT = Number(process.env.PORT) || 3000; // Correção do TypeScript: garante que seja um number
+  const PORT = Number(process.env.PORT) || 10000; // Correção do TypeScript: garante que seja um number
 
   // Middleware
   app.use(express.json());
