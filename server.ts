@@ -4,7 +4,6 @@ import { db } from "./src/server/storage.js";
 import { BookingStatus } from "./src/types";
 import authRouter from "./src/routes/auth";
 
-// Helper function to check if a booking is in the past
 function isTimeInPast(
   dateStr: string,
   timeStr: string,
@@ -12,11 +11,46 @@ function isTimeInPast(
 ): boolean {
   const now = sysTime || new Date();
 
+  // Obtém a data e hora atuais no fuso horário "America/Sao_Paulo" (Brasília)
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    hour12: false,
+  });
+
+  const parts = formatter.formatToParts(now);
+  const tzYear = Number(parts.find((p) => p.type === "year")?.value);
+  const tzMonth = Number(parts.find((p) => p.type === "month")?.value);
+  const tzDay = Number(parts.find((p) => p.type === "day")?.value);
+
+  // Garante a representação correta de 24 horas
+  const tzHourRaw = Number(parts.find((p) => p.type === "hour")?.value);
+  const tzHour = isNaN(tzHourRaw) ? 0 : tzHourRaw % 24;
+  const tzMinRaw = Number(parts.find((p) => p.type === "minute")?.value);
+  const tzMin = isNaN(tzMinRaw) ? 0 : tzMinRaw;
+
   const [year, month, day] = dateStr.split("-").map(Number);
   const [hour, min] = timeStr.split(":").map(Number);
 
-  const bookingDateTime = new Date(year, month - 1, day, hour, min, 0);
-  return bookingDateTime.getTime() < now.getTime();
+  if (year < tzYear) return true;
+  if (year > tzYear) return false;
+
+  if (month < tzMonth) return true;
+  if (month > tzMonth) return false;
+
+  if (day < tzDay) return true;
+  if (day > tzDay) return false;
+
+  if (hour < tzHour) return true;
+  if (hour > tzHour) return false;
+
+  if (min < tzMin) return true;
+
+  return false;
 }
 
 async function startServer() {
