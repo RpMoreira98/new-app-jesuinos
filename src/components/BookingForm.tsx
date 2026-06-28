@@ -325,12 +325,14 @@ export default function BookingForm({
           "Este horário pode ter sido reservado por outro cliente. Por favor, atualize e tente outro.",
         );
       }
-    } catch (err: any) {
+    } catch (error) {
+      console.error("Erro ao confirmar agendamento:", error);
+      // Evita a tela branca e mostra uma mensagem amigável para o cliente
       setActionError(
-        err.message ||
-          "Erro ao realizar seu agendamento no servidor. Tente novamente.",
+        "Não foi possível conectar ao servidor. Por favor, verifique sua conexão ou tente novamente.",
       );
     } finally {
+      // CRÍTICO: Garante que o botão volte a ficar ativo e o app não trave, mesmo se der erro!
       setIsSubmitting(false);
     }
   };
