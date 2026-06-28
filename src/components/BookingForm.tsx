@@ -832,8 +832,16 @@ export default function BookingForm({
                         : "bg-neutral-950/60 border-neutral-800 text-neutral-300 hover:border-neutral-700 hover:bg-neutral-950"
                   }`}
                 >
-                  <span className="text-[10px] uppercase font-mono tracking-wider opacity-80">
-                    {day.label}
+                  {/* BLINDAGEM ATÔMICA CONTRA TRADUTOR DO CHROME: Separação de letras para evitar formação de palavras conhecidas pela heurística */}
+                  <span
+                    translate="no"
+                    className="text-[10px] uppercase font-mono tracking-wider opacity-80 block"
+                  >
+                    {day.label.split("").map((char, idx) => (
+                      <span key={idx} translate="no">
+                        {char}
+                      </span>
+                    ))}
                   </span>
                   <span className="text-lg font-bold font-mono tracking-tight mt-0.5">
                     {formattedDisplayDate}
