@@ -11,27 +11,16 @@ function isTimeInPast(
 ): boolean {
   const now = sysTime || new Date();
 
-  // Obtém a data e hora atuais no fuso horário "America/Sao_Paulo" (Brasília)
-  const formatter = new Intl.DateTimeFormat("en-US", {
+  const tzDateStr = now.toLocaleString("en-US", {
     timeZone: "America/Sao_Paulo",
-    year: "numeric",
-    month: "numeric",
-    day: "numeric",
-    hour: "numeric",
-    minute: "numeric",
-    hour12: false,
   });
+  const localNow = new Date(tzDateStr);
 
-  const parts = formatter.formatToParts(now);
-  const tzYear = Number(parts.find((p) => p.type === "year")?.value);
-  const tzMonth = Number(parts.find((p) => p.type === "month")?.value);
-  const tzDay = Number(parts.find((p) => p.type === "day")?.value);
-
-  // Garante a representação correta de 24 horas
-  const tzHourRaw = Number(parts.find((p) => p.type === "hour")?.value);
-  const tzHour = isNaN(tzHourRaw) ? 0 : tzHourRaw % 24;
-  const tzMinRaw = Number(parts.find((p) => p.type === "minute")?.value);
-  const tzMin = isNaN(tzMinRaw) ? 0 : tzMinRaw;
+  const tzYear = localNow.getFullYear();
+  const tzMonth = localNow.getMonth() + 1;
+  const tzDay = localNow.getDate();
+  const tzHour = localNow.getHours();
+  const tzMin = localNow.getMinutes();
 
   const [year, month, day] = dateStr.split("-").map(Number);
   const [hour, min] = timeStr.split(":").map(Number);
