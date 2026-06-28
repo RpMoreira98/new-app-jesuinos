@@ -102,7 +102,7 @@ async function startServer() {
     }
   });
 
-  // Create a new booking
+  // Create a new booking (SUBSTITUÍDO DA LINHA 95 À 162)
   app.post(["/api/bookings", "/api/agendamentos"], async (req, res) => {
     try {
       const { clientName, clientEmail, clientPhone, date, time } = req.body;
@@ -118,7 +118,7 @@ async function startServer() {
       if (isTimeInPast(date, time, currentServerTime)) {
         return res.status(400).json({
           error:
-            "Não é possível realizar agendamentos em datas ou horários passados.",
+            "Não é possível realizar agendamentos in datas ou horários passados.",
         });
       }
 
@@ -184,7 +184,12 @@ async function startServer() {
         status: "pending",
       });
 
-      res.status(201).json(newBooking);
+      // GARANTIA DE COMPATIBILIDADE COM O FRONT-END
+      res.status(201).json({
+        ...newBooking,
+        status:
+          typeof newBooking.status === "string" ? newBooking.status : "pending",
+      });
     } catch (err: any) {
       console.error(err);
       res
@@ -217,6 +222,7 @@ async function startServer() {
             });
           }
 
+          const { db } = await import("./src/server/storage.js");
           const existingBookings = await db.getBookings();
           const conflict = existingBookings.find(
             (b) =>
