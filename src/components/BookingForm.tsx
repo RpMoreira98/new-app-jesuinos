@@ -931,7 +931,23 @@ export default function BookingForm({
                       <span className="text-gold-500 font-mono text-sm">
                         {selectedTime}
                       </span>{" "}
-                      do dia {formatDateWithDayName(selectedDate)}
+                      do dia{" "}
+                      {(() => {
+                        try {
+                          // Substitui o formatDateWithDayName por formatação nativa à prova de falhas no mobile
+                          const [year, month, day] = selectedDate
+                            .split("-")
+                            .map(Number);
+                          const dateObj = new Date(year, month - 1, day);
+                          return dateObj.toLocaleDateString("pt-BR", {
+                            day: "numeric",
+                            month: "long",
+                            weekday: "long",
+                          });
+                        } catch {
+                          return selectedDate;
+                        }
+                      })()}
                     </p>
                   </div>
                   <div>
