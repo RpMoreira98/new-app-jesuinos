@@ -97,6 +97,12 @@ export default function BookingForm({
       desc: "Corte de cabelo + barbaterapia + sobrancelha na navalha",
     },
     {
+      name: "Barba",
+      price: "R$ 20,00",
+      duration: "30 min",
+      desc: "Barba com design personalizado e finalização",
+    },
+    {
       name: "Sobrancelha na Navalha",
       price: "R$ 7,00",
       duration: "15 min",
