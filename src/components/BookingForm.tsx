@@ -66,6 +66,7 @@ export default function BookingForm({
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+
   // Visual Service selection (adds premium realistic context)
   const [selectedService, setSelectedService] = useState<{
     name: string;
@@ -333,12 +334,10 @@ export default function BookingForm({
       }
     } catch (error) {
       console.error("Erro ao confirmar agendamento:", error);
-      // Evita a tela branca e mostra uma mensagem amigável para o cliente
       setActionError(
         "Não foi possível conectar ao servidor. Por favor, verifique sua conexão ou tente novamente.",
       );
     } finally {
-      // CRÍTICO: Garante que o botão volte a ficar ativo e o app não trave, mesmo se der erro!
       setIsSubmitting(false);
     }
   };
@@ -800,190 +799,130 @@ export default function BookingForm({
             <RefreshCw
               className={`h-3 w-3 ${isLoadingBookings ? "animate-spin" : ""}`}
             />
-            Carregar Vagas
+            Atualizar
           </button>
         </div>
 
-        {/* Dynamic horizontal scrollable Day Picker */}
-        <div className="space-y-2 w-full min-w-0 overflow-hidden">
-          <label className="text-[11px] font-mono tracking-widest uppercase text-neutral-400 flex items-center gap-1.5">
-            <Calendar className="h-3.5 w-3.5 text-gold-500" />
-            1. Escolha o Dia do Corte
-          </label>
+        {/* Calendar Horizontal List Selector */}
+        <div className="rounded-2xl bg-neutral-900 border border-neutral-800 p-4 sm:p-5 space-y-3">
+          <div className="flex items-center gap-2 text-neutral-400 text-[11px] font-mono uppercase tracking-wider border-b border-neutral-950 pb-2">
+            <Calendar className="w-4 h-4 text-gold-500" />
+            <span>1. Escolha o dia do corte</span>
+          </div>
 
-          <div className="flex gap-2.5 overflow-x-auto pb-3 pt-1 scrollbar-thin w-full">
-            {dayList.map((day) => (
-              <button
-                key={day.dateStr}
-                disabled={day.isClosed}
-                onClick={() => {
-                  setSelectedDate(day.dateStr);
-                  setSelectedTime("");
-                }}
-                className={`flex-shrink-0 flex flex-col justify-between items-center w-20 py-3.5 rounded-xl border transition-all duration-300 relative cursor-pointer ${
-                  day.isClosed
-                    ? "opacity-35 bg-neutral-950/20 border-neutral-950 text-neutral-600 disabled:cursor-not-allowed"
-                    : selectedDate === day.dateStr
-                      ? "bg-neutral-950 border-gold-500 text-white font-bold ring-1 ring-gold-500/20"
-                      : "bg-neutral-900/50 border-neutral-800 hover:border-neutral-700 text-neutral-400"
-                }`}
-              >
-                <span className="text-[10px] font-mono uppercase tracking-wider block opacity-70">
-                  {day.label}
-                </span>
+          <div className="flex gap-2 overflow-x-auto pb-2 pt-1 scrollbar-thin scrollbar-thumb-neutral-800 snap-x">
+            {dayList.map((day) => {
+              const isSelected = selectedDate === day.dateStr;
+              const formattedDisplayDate = day.dateStr.split("-")[2];
 
-                <span className="text-xl font-serif tracking-tighter block my-1">
-                  {day.dateStr.split("-")[2]}
-                </span>
-
-                {day.isClosed ? (
-                  <span className="text-[9px] bg-red-800/10 border border-red-800/20 text-red-400 rounded px-1 tracking-tighter block mt-0.5 font-bold uppercase">
-                    Off
+              return (
+                <button
+                  key={day.dateStr}
+                  type="button"
+                  disabled={day.isClosed}
+                  onClick={() => {
+                    setSelectedDate(day.dateStr);
+                    setSelectedTime("");
+                  }}
+                  className={`flex flex-col items-center justify-center p-3 rounded-xl border min-w-[65px] h-[75px] transition-all snap-start cursor-pointer ${
+                    day.isClosed
+                      ? "bg-neutral-950/20 border-neutral-950 text-neutral-600 opacity-40 cursor-not-allowed"
+                      : isSelected
+                        ? "bg-gold-500 border-gold-500 text-neutral-950 font-bold scale-105 shadow-md shadow-gold-500/10"
+                        : "bg-neutral-950/60 border-neutral-800 text-neutral-300 hover:border-neutral-700 hover:bg-neutral-950"
+                  }`}
+                >
+                  <span className="text-[10px] uppercase font-mono tracking-wider opacity-80">
+                    {day.label}
                   </span>
-                ) : (
-                  <span
-                    className={`text-[9px] font-bold rounded px-1.5 uppercase mt-0.5 block ${
-                      selectedDate === day.dateStr
-                        ? "bg-gold-500/15 text-gold-500"
-                        : "bg-neutral-950/60 text-neutral-500"
-                    }`}
-                  >
-                    Disponível
+                  <span className="text-lg font-bold font-mono tracking-tight mt-0.5">
+                    {formattedDisplayDate}
                   </span>
-                )}
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Dynamic Hour Slots grid selector */}
+        {/* Slots Grid Selector */}
         {selectedDate && (
-          <div className="space-y-3.5 bg-neutral-950 border border-neutral-900 rounded-2xl p-4 sm:p-6">
-            <label className="text-[11px] font-mono tracking-widest uppercase text-neutral-400 flex items-center gap-1.5 border-b border-neutral-900 pb-3">
-              <Clock className="h-3.5 w-3.5 text-gold-500" />
-              2. Escolha o Horário Livre de {formatDateLong(selectedDate)}
-            </label>
+          <div className="rounded-2xl bg-neutral-900 border border-neutral-800 p-4 sm:p-5 space-y-4">
+            <div className="flex items-center gap-2 text-neutral-400 text-[11px] font-mono uppercase tracking-wider border-b border-neutral-950 pb-2">
+              <Clock className="w-4 h-4 text-gold-500" />
+              <span translate="no">
+                2. Escolha o horário livre de{" "}
+                {(() => {
+                  try {
+                    const [year, month, day] = selectedDate
+                      .split("-")
+                      .map(Number);
+                    const dateObj = new Date(year, month - 1, day);
+                    return dateObj.toLocaleDateString("pt-BR", {
+                      day: "numeric",
+                      month: "long",
+                    });
+                  } catch {
+                    return selectedDate;
+                  }
+                })()}
+              </span>
+            </div>
 
             {activeSlots.length === 0 ? (
-              <p className="text-xs text-neutral-500 py-3 text-center">
-                Nenhum horário gerado para esta data nas configurações de
-                expediente.
+              <p className="text-xs text-neutral-500 text-center py-6">
+                Nenhum horário de atendimento configurado para este dia.
               </p>
             ) : (
-              <div className="grid grid-cols-2 min-[380px]:grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-3">
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
                 {activeSlots.map((slot) => {
-                  const isSelected = selectedTime === slot.time;
+                  const isCurrentSelected = selectedTime === slot.time;
 
                   return (
                     <button
                       key={slot.time}
+                      type="button"
                       disabled={!slot.isAvailable}
                       onClick={() => setSelectedTime(slot.time)}
-                      className={`py-3.5 rounded-xl border text-center font-mono text-xs transition-all duration-300 relative cursor-pointer ${
+                      translate="no"
+                      className={`relative flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all min-h-[60px] cursor-pointer ${
                         !slot.isAvailable
-                          ? "bg-neutral-950 border-neutral-950 text-neutral-600 cursor-not-allowed opacity-35"
-                          : isSelected
-                            ? "bg-gold-500/10 border-gold-500 text-gold-500 font-bold scale-[1.02]"
-                            : "bg-neutral-900/60 border-neutral-800 hover:border-neutral-700 text-neutral-300 hover:text-white"
+                          ? "bg-neutral-950/30 border-neutral-950/50 text-neutral-600 cursor-not-allowed"
+                          : isCurrentSelected
+                            ? "bg-neutral-950 border-gold-500 ring-1 ring-gold-500 text-gold-500 scale-102 shadow-lg"
+                            : "bg-neutral-950/50 border-neutral-800 text-neutral-200 hover:border-neutral-700 hover:bg-neutral-950"
                       }`}
                     >
-                      <span className="block font-bold">{slot.time}</span>
+                      <span className="font-mono text-sm font-bold tracking-wide block">
+                        {slot.time}
+                      </span>
 
-                      {!slot.isAvailable && (
-                        <span className="text-[9px] opacity-70 block tracking-tight font-medium">
-                          {slot.reason === "Ocupado"
-                            ? "Reservado"
-                            : slot.reason}
-                        </span>
-                      )}
-
-                      {slot.isAvailable && !isSelected && (
-                        <span className="text-[8px] text-emerald-500 font-bold block uppercase tracking-wider mt-0.5 opacity-60">
-                          Livre
-                        </span>
-                      )}
-
-                      {slot.isAvailable && isSelected && (
-                        <span className="text-[8px] text-gold-500 font-bold block uppercase tracking-wider mt-0.5">
-                          Selecionado
-                        </span>
-                      )}
+                      <span
+                        translate="no"
+                        className={`text-[9px] uppercase tracking-wider font-bold mt-1 block ${
+                          !slot.isAvailable
+                            ? slot.reason === "Almoço"
+                              ? "text-neutral-500"
+                              : "text-neutral-600"
+                            : isCurrentSelected
+                              ? "text-gold-500 font-extrabold animate-pulse"
+                              : "text-emerald-500"
+                        }`}
+                      >
+                        {isCurrentSelected ? (
+                          <span>Selecionado</span>
+                        ) : slot.isAvailable ? (
+                          <span>Livre</span>
+                        ) : (
+                          <span>{slot.reason}</span>
+                        )}
+                      </span>
                     </button>
                   );
                 })}
               </div>
             )}
 
-            {/* Quick Summary Section and Confirm Action */}
-            {currentUser && selectedTime && (
-              <motion.div
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="pt-4 mt-4 border-t border-neutral-900 space-y-4"
-              >
-                <div className="bg-neutral-900/40 border border-neutral-800 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs font-display">
-                  <div className="text-center sm:text-left">
-                    <p className="text-neutral-500 text-[10px] tracking-widest uppercase mb-0.5">
-                      Confirmar Agendamento
-                    </p>
-                    <p className="font-bold text-neutral-200">
-                      {selectedService.name} às{" "}
-                      <span className="text-gold-500 font-mono text-sm">
-                        {selectedTime}
-                      </span>{" "}
-                      do dia{" "}
-                      {(() => {
-                        try {
-                          // Substitui o formatDateWithDayName por formatação nativa à prova de falhas no mobile
-                          const [year, month, day] = selectedDate
-                            .split("-")
-                            .map(Number);
-                          const dateObj = new Date(year, month - 1, day);
-                          return dateObj.toLocaleDateString("pt-BR", {
-                            day: "numeric",
-                            month: "long",
-                            weekday: "long",
-                          });
-                        } catch {
-                          return selectedDate;
-                        }
-                      })()}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="font-serif font-bold text-gold-500 text-lg sm:text-xl">
-                      {selectedService.price}
-                    </span>
-                  </div>
-                </div>
-
-                {actionError && (
-                  <div className="flex items-center gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400">
-                    <AlertTriangle className="h-4 w-4 shrink-0" />
-                    <span>{actionError}</span>
-                  </div>
-                )}
-
-                <button
-                  onClick={handleBookingConfirm}
-                  disabled={isSubmitting}
-                  className="w-full bg-gold-500 hover:bg-gold-600 text-neutral-950 font-bold py-4 px-6 rounded-xl text-xs tracking-widest uppercase transition-all duration-300 shadow-xl shadow-gold-500/10 flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                      Processando Reserva no Jesuino's...
-                    </>
-                  ) : (
-                    <>
-                      <CalendarCheck className="h-4 w-4" />
-                      Agendar Horário na Barbearia
-                    </>
-                  )}
-                </button>
-              </motion.div>
-            )}
-
+            {/* CARD DE IDENTIFICAÇÃO INTEGRADO AO FINAL DA CONDIÇÃO DO DIA */}
             {!currentUser && (
               <div className="text-center bg-neutral-900/20 border border-dashed border-neutral-800 p-6 rounded-xl mt-4">
                 <Scissors className="h-5 w-5 text-neutral-500 mx-auto mb-2 opacity-50" />
@@ -997,6 +936,86 @@ export default function BookingForm({
               </div>
             )}
           </div>
+        )}
+
+        {/* Quick Summary Section and Confirm Action */}
+        {currentUser && selectedTime && (
+          <motion.div
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="pt-4 mt-4 border-t border-neutral-900 space-y-4"
+          >
+            <div className="bg-neutral-900/40 border border-neutral-800 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs font-display">
+              <div className="text-center sm:text-left">
+                <p
+                  className="text-neutral-500 text-[10px] tracking-widest uppercase mb-0.5"
+                  translate="no"
+                >
+                  Confirmar Agendamento
+                </p>
+                <p className="font-bold text-neutral-200" translate="no">
+                  <span>{selectedService.name}</span>
+                  <span className="mx-1">às</span>
+                  <span className="text-gold-500 font-mono text-sm font-bold">
+                    {selectedTime}
+                  </span>
+                  <span className="mx-1">do dia</span>
+                  <span className="text-neutral-200">
+                    {(() => {
+                      try {
+                        const [year, month, day] = selectedDate
+                          .split("-")
+                          .map(Number);
+                        const dateObj = new Date(year, month - 1, day);
+                        return dateObj.toLocaleDateString("pt-BR", {
+                          day: "numeric",
+                          month: "long",
+                          weekday: "long",
+                        });
+                      } catch {
+                        return selectedDate;
+                      }
+                    })()}
+                  </span>
+                </p>
+              </div>
+              <div>
+                <span
+                  className="font-serif font-bold text-gold-500 text-lg sm:text-xl"
+                  translate="no"
+                >
+                  {selectedService.price}
+                </span>
+              </div>
+            </div>
+
+            {actionError && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                <span>{actionError}</span>
+              </div>
+            )}
+
+            <button
+              onClick={handleBookingConfirm}
+              disabled={isSubmitting}
+              className="w-full bg-gold-500 hover:bg-gold-600 text-neutral-950 font-bold py-4 px-6 rounded-xl text-xs tracking-widest uppercase transition-all duration-300 shadow-xl shadow-gold-500/10 flex items-center justify-center gap-2 cursor-pointer"
+            >
+              {isSubmitting ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <span translate="no">
+                    Processando Reserva no Jesuino's...
+                  </span>
+                </>
+              ) : (
+                <>
+                  <CalendarCheck className="h-4 w-4" />
+                  <span translate="no">Agendar Horário na Barbearia</span>
+                </>
+              )}
+            </button>
+          </motion.div>
         )}
       </div>
     </div>
