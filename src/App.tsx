@@ -1433,8 +1433,16 @@ export default function App() {
               </span>
             </div>
             <div>
-              &copy; {new Date().getFullYear()} Desenvolvido por GSI TECH. Todos
-              os direitos reservados.
+              &copy; {new Date().getFullYear()} Desenvolvido por{" "}
+              <a
+                href="https://www.linkedin.com/in/rodrigo-pontes-0988aa210/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 hover:text-blue-300 underline"
+              >
+                RMO TECH
+              </a>
+              . Todos os direitos reservados.
             </div>
           </footer>
         </main>
